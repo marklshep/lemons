@@ -1,24 +1,31 @@
 <template>
     <div>
+        <Transition>
+            <div class="message" v-if="message">
+                {{ message }}
+                <!-- <pre v-if="grid">{{ grid }}</pre> -->
+            </div>
+        </Transition>
         <header>
             <h1> Lemons </h1>
         </header>
         <div id="board">
-            <div v-for="(lll, index) in letterStates" class="row">
-                <button v-for="(ll, index) in lll"
+            <div v-for="(lll, i) in letterStates" class="row">
+                <button v-for="(ll, j) in lll"
                         :disabled="ll.order === -2"
-                        @click="setSolution(ll)"
+                        @click="setSolution(ll, j, i)"
                         class="tile"
-                        :class="getStatus(ll.order)"
+                        :class="getStatus(ll.order, j, i)"
                 >
                     {{ll.letter}}
                 </button>
-                <!-- <button v-bind:class="getStatus(ll.order)" @click="setSolution(ll)" > {{ll.letter}} </button> -->
             </div>
             <button @click="enterSolution"> Enter </button>
             <div id="answers">
-                {{solution}}
-                <button v-for="word in solutionWords"> {{word}} <b>X </b> </button>
+                {{getSolution(solution)}}
+                <button v-for="(word, index) in solutionWords"
+                        @click="removeSolution(word, index)"
+                > {{getSolution(word)}} <b>X </b> </button>
             </div>
         </div>
     </div>
@@ -33,13 +40,18 @@ interface LetterState {
     order: number;
 }
 
+interface SolutionLetter {
+    x: number;
+    y: number;
+    letter: string;
+}
+
 @Component
 export default class LemonGame extends Vue {
-    private something: string = 'something';
-    private ughList: string[] = ['something1', 'soemthign2'];
-    private solution: string = '';
-    private solutionWords: string[] = [];
+    private solution: SolutionLetter[] = [];
+    private solutionWords: SolutionLetter[][] = [];
     private order: number = 0;
+    private message: string = '';
     private lemonLetters: string[][] = [
         ['L', 'W', 'U', 'G'],
         ['N', 'E', 'M', 'T'],
@@ -65,15 +77,42 @@ export default class LemonGame extends Vue {
         }
         console.log(this.letterStates);
     }
-
-    private setSolution(ls: LetterState) {
+    // function shake() {
+    //     shakeRowIndex = currentRowIndex
+    //     setTimeout(() => {
+    //         shakeRowIndex = -1
+    //     }, 1000)
+    //     }
+    private showMessage(msg: string, time = 1000) {
+        this.message = msg;
+        if (time > 0) {
+            setTimeout(() => {
+                this.message = '';
+            }, time);
+        }
+    }
+    private getSolution(sol: SolutionLetter[]): string {
+        let solString: string = '';
+        // change to comprehension?
+        for (const sl of sol) {
+            solString = solString + sl.letter;
+        }
+        return solString;
+    }
+    private setSolution(ls: LetterState, x: number, y: number) {
         if (ls.order === -1) {
-            this.solution = this.solution + ls.letter;
+            const solLetter: SolutionLetter = {
+                x,
+                y,
+                letter: ls.letter,
+            };
+            this.solution.push(solLetter);
             ls.order = this.order;
             this.order += 1;
         } else {
-            this.solution = this.solution.substring(0, ls.order) +
-                            this.solution.substring(ls.order + 1, this.solution.length);
+            this.solution.splice(ls.order, 1);
+            // this.solution = this.solution.substring(0, ls.order) +
+//                 this.solution.substring(ls.order + 1, this.solution.length);
             ls.order = -1;
             this.order -= 1;
             for (const lll of this.letterStates) {
@@ -84,28 +123,48 @@ export default class LemonGame extends Vue {
                 }
             }
         }
-        if (this.dictSet.has(this.solution)) {
+        if (this.dictSet.has(this.getSolution(this.solution))) {
             console.log('that is a word');
         }
-        console.log(this.dictSet.has(this.solution));
         console.log(this.order);
         console.log(this.letterStates);
     }
     private enterSolution() {
-        if (this.dictSet.has(this.solution)) {
+        if (this.solution.length < 3) {
+            // shake()
+            this.showMessage(`All words must be at least three letters long`);
+            return;
+        }
+        if (this.dictSet.has(this.getSolution(this.solution))) {
             this.solutionWords.push(this.solution);
-            this.solution = '';
+            this.solution = [];
+            let won: boolean = true;
             for (const lll of this.letterStates) {
                 for (const ll of lll) {
                     if (ll.order !== -1 && ll.order !== -2) {
                         ll.order = -2;
                     }
+                    if (ll.order !== -2) {
+                        won = false;
+                    }
                 }
             }
             this.order = 0;
+            if (won) {
+                this.showMessage(`woah cool`);
+                navigator.clipboard.writeText('woah cool');
+            }
         } else {
-            console.log('not a solution');
+            // shake()
+            this.showMessage(`Not in word list`);
         }
+    }
+    private removeSolution(sol: SolutionLetter[], index: number) {
+        for (const sl of sol) {
+            console.log('in remove');
+            this.letterStates[sl.y][sl.x].order = -1;
+        }
+        this.solutionWords.splice(index, 1);
     }
     private getStatus(order: number): string {
         if (order === -1) {
@@ -123,6 +182,22 @@ export default class LemonGame extends Vue {
 
 
 <style scoped>
+.message {
+    position: absolute;
+    left: 50%;
+    top: 80px;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.85);
+    padding: 16px 20px;
+    z-index: 2;
+    border-radius: 4px;
+    transform: translateX(-50%);
+    transition: opacity 0.3s ease-out;
+    font-weight: 600;
+}
+.message.v-leave-to {
+    opacity: 0;
+}
 .bolded { font-weight: bold; }
 #board {
     display: grid;
