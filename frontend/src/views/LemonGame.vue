@@ -9,6 +9,7 @@
         <header>
             <h1> Lemons </h1>
         </header>
+        <div > {{time}} </div>
         <div id="board">
             <div v-for="(lll, i) in letterStates" class="row">
                 <button v-for="(ll, j) in lll"
@@ -20,14 +21,17 @@
                     {{ll.letter}}
                 </button>
             </div>
-            <button @click="enterSolution"> Enter </button>
-            <div id="answers">
-                {{getSolution(solution)}}
-                <button v-for="(word, index) in solutionWords"
-                        @click="removeSolution(word, index)"
-                > {{getSolution(word)}} <b>X </b> </button>
-            </div>
         </div>
+        <button class="enter" @click="enterSolution"> Enter </button>
+        <div id="answers">
+            {{getSolution(solution)}}
+            <button v-for="(word, index) in solutionWords"
+                    @click="removeSolution(word, index)"
+                    align="center"
+                    justify="center"
+            > {{getSolution(word)}} <b>X </b> </button>
+        </div>
+    </div>
     </div>
 </template>
 
@@ -48,6 +52,11 @@ interface SolutionLetter {
 
 @Component
 export default class LemonGame extends Vue {
+    private time: string =  '00:00:00.000';
+    private gameStarted: boolean = true;
+    private gameTimer: number = 0;
+    private stoppedDuration: number = 0;
+    private timeBegan: Date = null;
     private solution: SolutionLetter[] = [];
     private solutionWords: SolutionLetter[][] = [];
     private order: number = 0;
@@ -58,6 +67,7 @@ export default class LemonGame extends Vue {
         ['E', 'R', 'S', 'C'],
         ['U', 'T', 'O', 'E'],
     ];
+    private showModal: boolean = true;
     private letterStates: LetterState[][] = [];
 
     private dictSet: Set<string> = new Set<string>();
@@ -76,6 +86,7 @@ export default class LemonGame extends Vue {
             this.letterStates.push(newLetters);
         }
         console.log(this.letterStates);
+        this.startGame();
     }
     // function shake() {
     //     shakeRowIndex = currentRowIndex
@@ -93,7 +104,6 @@ export default class LemonGame extends Vue {
     }
     private getSolution(sol: SolutionLetter[]): string {
         let solString: string = '';
-        // change to comprehension?
         for (const sl of sol) {
             solString = solString + sl.letter;
         }
@@ -112,7 +122,7 @@ export default class LemonGame extends Vue {
         } else {
             this.solution.splice(ls.order, 1);
             // this.solution = this.solution.substring(0, ls.order) +
-//                 this.solution.substring(ls.order + 1, this.solution.length);
+            //                 this.solution.substring(ls.order + 1, this.solution.length);
             ls.order = -1;
             this.order -= 1;
             for (const lll of this.letterStates) {
@@ -130,7 +140,7 @@ export default class LemonGame extends Vue {
         console.log(this.letterStates);
     }
     private enterSolution() {
-        if (this.solution.length < 3) {
+        if (this.solution.length < 4) {
             // shake()
             this.showMessage(`All words must be at least three letters long`);
             return;
@@ -152,7 +162,7 @@ export default class LemonGame extends Vue {
             this.order = 0;
             if (won) {
                 this.showMessage(`woah cool`);
-                navigator.clipboard.writeText('woah cool');
+                clearInterval(this.gameTimer);
             }
         } else {
             // shake()
@@ -176,6 +186,34 @@ export default class LemonGame extends Vue {
         }
     }
 
+    private startGame() {
+        if (this.timeBegan === null) {
+            this.timeBegan = new Date();
+        }
+        this.gameTimer = setInterval(this.clockRunning, 10);
+    }
+    private clockRunning() {
+        const currentTime: Date = new Date();
+        const timeElapsed = new Date(currentTime.getTime() - this.timeBegan.getTime() - this.stoppedDuration);
+        const hour = timeElapsed.getUTCHours();
+        const min = timeElapsed.getUTCMinutes();
+        const sec = timeElapsed.getUTCSeconds();
+        const ms = timeElapsed.getUTCMilliseconds();
+
+        this.time =
+            this.zeroPrefix(hour, 2) + ':' +
+            this.zeroPrefix(min, 2) + ':' +
+            this.zeroPrefix(sec, 2) + '.' +
+            this.zeroPrefix(ms, 3);
+    }
+
+    private zeroPrefix(num, digit) {
+        let zero = '';
+        for (let i = 0; i < digit; i++) {
+            zero += '0';
+        }
+        return (zero + num).slice(-digit);
+    }
 }
 
 </script>
@@ -195,20 +233,25 @@ export default class LemonGame extends Vue {
     transition: opacity 0.3s ease-out;
     font-weight: 600;
 }
-.message.v-leave-to {
+.message.v-leave-to {;
     opacity: 0;
 }
 .bolded { font-weight: bold; }
 #board {
     display: grid;
-    grid-template-rows: repeat(6, 1fr);
+    grid-template-rows: repeat(4, 1fr);
     grid-gap: 5px;
     padding: 10px;
     box-sizing: border-box;
-    --height: min(420px, calc(var(--vh, 100vh) - 310px));
+    --height: min(350px, calc(var(--vh, 100vh) - 310px));
     height: var(--height);
-    width: min(350px, calc(var(--height) / 6 * 4));
+    width: min(350px, calc(var(--height) / 4 * 4));
     margin: 0px auto;
+}
+.enter {
+    --thing: min(420px, calc(var(--vh, 100vh) - 310px));
+    width: min(350px, calc(var(--thing) / 4 * 4));
+    height: min(105px, calc(var(--thing) / 4));
 }
 .row {
     display: grid;
@@ -216,7 +259,12 @@ export default class LemonGame extends Vue {
     grid-gap: 5px;
 }
 .tile {
+    justify-content: center;
+    align-items: center;
     width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
     font-size: 2rem;
     line-height: 2rem;
     font-weight: bold;
@@ -254,5 +302,41 @@ body {
     max-width: 500px;
     margin: 0px auto;
 }
+.text {
+    box-sizing: border-box;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+.overlay {
+    position: fixed;
+    z-index: 9998;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .5);
+}
 
+.modal {
+    --height: min(350px, calc(var(--vh, 100vh) - 310px));
+    height: 500px;
+    width: 500px;
+    padding: 20px 30px;
+    background-color: #fff;
+}
+
+.close{
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
 </style>
