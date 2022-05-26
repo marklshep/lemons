@@ -7,7 +7,7 @@
             </div>
         </Transition>
         <header>
-            <h1> Lemons </h1>
+            <h1> &#x1F34B Lemons &#x1F34B </h1>
         </header>
         <div v-if="!gameStarted">
             <div id="board-text">
@@ -18,21 +18,25 @@
                 7-letter words are 5 points each<br>
                 8-letter words are 11 points each
             </div>
-            <button v-if="roundNumber < 4" @click="startGame" class="enter"> I'm Ready! </button>
+            <button v-if="roundNumber < 4" @click="startGame" class="button-1"> I'm Ready! </button>
         </div>
         <div v-else-if="gameStarted && roundPause">
             <div id="board-text">
                 <div v-for="(round,i) in rounds">
-                    Round {{round.roundNumber}}: <br>
-                    Time: {{round.time}} <br>
-                    Score: {{score(round)}} <br>
+                    Round {{round.roundNumber}}! Time: {{round.time}}, Score: {{score(round)}} <br>
                     <span v-for="(word, i) in round.solutionWords">
                         {{getSolution(word)}} ({{getSolutionScore(word)}})
                     </span>
                 </div>
+                <div v-if="roundNumber === 4">
+                    Some other possible answers:
+                    <div v-for="(round,i) in rounds">
+                        {{roundText(i)}}
+                    </div>
+                </div>
             </div>
-            <button v-if="roundNumber < 4" @click="startGame" class="enter"> I'm Ready! </button>
-            <button v-else-if="roundNumber === 4" @click="shareGame" class="enter"> Share Results! </button>
+            <button v-if="roundNumber < 4" @click="startGame" class="button-1"> I'm Ready! </button>
+            <button v-else-if="roundNumber === 4" @click="shareGame" class="button-1"> Share Results! </button>
         </div>
         <div v-else-if="gameStarted && !roundPause">
             <div> Round: {{roundNumber}} </div>
@@ -49,12 +53,13 @@
                     </button>
                 </div>
             </div>
-            <button class="enter" @click="enterSolution"> Enter </button>
+            <button v-if="!roundReady" class="button-1" @click="enterSolution"> Enter </button>
+            <button v-if="roundReady" class="button-1" @click="nextRound"> Next Round! </button>
             <div id="answers">
-                <button v-if="solution.length > 0" @click="removeSolution(solution, -1)">
+                <button class="button-2" v-if="solution.length > 0" @click="removeSolution(solution, -1)">
                     {{getSolution(solution)}} ({{getSolutionScore(solution)}}) <b> X</b>
                 </button>
-                <button v-for="(word, index) in solutionWords"
+                <button class="button-2" v-for="(word, index) in solutionWords"
                         @click="removeSolution(word, index)"
                         align="center"
                         justify="center"
@@ -103,13 +108,16 @@ export default class LemonGame extends Vue {
     private lemonLetters1: string = 'SOURORANGECITRON';
     private lemonLetters2: string = 'TECHNICALLYBERRY';
     private lemonLetters3: string = 'SIXHUNDREDPOUNDS';
+    private lemonPhrase1: string = 'SOUR ORANGE CITRON: Lemons are a hybrid between a sour orange and a citron.';
+    private lemonPhrase2: string = 'TECHNICALLY BERRY: Lemons are berries in the botanical sense.';
+    private lemonPhrase3: string = 'SIX HUNDRED POUNDS: Lemons trees can produce up to 600lbs of lemons every year.';
     private showModal: boolean = true;
     private letterStates: LetterState[][] = [];
     private rounds: RoundData[] = [];
     private roundNumber: number = 1;
     private dictSet: Set<string> = new Set<string>();
     private roundPause: boolean = false;
-
+    private roundReady: boolean = false;
     private mounted(): void {
         for (const word of dict.match(/\b(\w+)\b/g)) {
             // console.log(word);
@@ -143,6 +151,7 @@ export default class LemonGame extends Vue {
             }
             this.letterStates.push(newLetters);
         }
+        this.roundReady = false;
     }
     private showMessage(msg: string, time = 1000) {
         this.message = msg;
@@ -194,6 +203,17 @@ export default class LemonGame extends Vue {
             ls.order = -1;
         }
     }
+    private roundText(roundNumber: number): string {
+        let lemonPhrase: string = '';
+        if (roundNumber === 0) {
+            lemonPhrase = this.lemonPhrase1;
+        } else if (roundNumber === 1) {
+            lemonPhrase = this.lemonPhrase2;
+        } else {
+            lemonPhrase = this.lemonPhrase3;
+        }
+        return lemonPhrase;
+    }
     private enterSolution() {
         if (this.solution.length < 3) {
             // shake()
@@ -217,23 +237,27 @@ export default class LemonGame extends Vue {
             this.order = 0;
             if (won) {
                 clearInterval(this.gameTimer);
-                const round = {
-                    roundNumber: this.roundNumber,
-                    solutionWords: this.solutionWords,
-                    status: 'complete',
-                    startTime: this.timeBegan,
-                    endTime: this.timeEnd,
-                    time: this.time,
-                };
-                this.rounds.push(round);
-                this.roundNumber = this.roundNumber + 1;
-                this.roundPause = true;
-                this.solutionWords = [];
+                this.roundReady = true;
             }
         } else {
             // shake()
             this.showMessage(`Not in word list`);
         }
+    }
+    private nextRound() {
+        const round = {
+            roundNumber: this.roundNumber,
+            solutionWords: this.solutionWords,
+            status: 'complete',
+            startTime: this.timeBegan,
+            endTime: this.timeEnd,
+            time: this.time,
+        };
+        this.rounds.push(round);
+        this.roundNumber = this.roundNumber + 1;
+        this.roundPause = true;
+        this.solutionWords = [];
+
     }
     private removeSolution(sol: SolutionLetter[], index: number) {
         for (const sl of sol) {
@@ -301,7 +325,7 @@ export default class LemonGame extends Vue {
             this.zeroPrefix(sec, 2) + '.' +
             this.zeroPrefix(ms, 3);
 
-        const shareText: string = 'Lemons\n' + 'Time: ' + totalTime + '\n' + 'Score: ' + totalScore;
+        const shareText: string = '🍋 Lemons 🍋\n' + 'Time: ' + totalTime + '\n' + 'Score: ' + totalScore;
         if (navigator.share) {
             navigator.share({
                 text: shareText,
@@ -414,11 +438,11 @@ export default class LemonGame extends Vue {
     position: relative;
 }
 .correct {
-    background-color: #6aaa64 !important;
+    background-color: #75803e !important;
 }
 
 .present {
-    background-color: #c9b458 !important;
+    background-color: #fcc219 !important;
 }
 
 .absent {
@@ -438,7 +462,7 @@ header {
     position: relative;
 }
 body {
-    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
     text-align: center;
     max-width: 500px;
     margin: 0px auto;
@@ -485,4 +509,67 @@ body {
         font-size: 3vh;
     }
 }
+/* CSS */
+.button-1 {
+    background-color: #fcc219;
+    border-radius: 8px;
+    border-style: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-block;
+    font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    height: 40px;
+    --thing: min(350px, calc(var(--vh, 100vh) - 310px));
+    width: min(350px, calc(var(--thing) / 4 * 4));
+    line-height: 20px;
+    list-style: none;
+    margin: 0;
+    outline: none;
+    padding: 10px 16px;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: color 100ms;
+    vertical-align: baseline;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+/* .button-1:hover {
+   background-color: #ffebca;
+   } */
+.button-2 {
+    background-color: #fcc219;
+    border-radius: 8px;
+    border-style: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-block;
+    font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    height: 40px;
+    line-height: 20px;
+    list-style: none;
+    margin: 3px;
+    outline: none;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: color 100ms;
+    vertical-align: baseline;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+/* .button-2:hover,
+   .button-2:focus {
+   background-color: #ffebca;
+   } */
 </style>
