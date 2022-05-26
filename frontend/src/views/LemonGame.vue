@@ -9,29 +9,58 @@
         <header>
             <h1> Lemons </h1>
         </header>
-        <div > {{time}} </div>
-        <div id="board">
-            <div v-for="(lll, i) in letterStates" class="row">
-                <button v-for="(ll, j) in lll"
-                        :disabled="ll.order === -2"
-                        @click="setSolution(ll, j, i)"
-                        class="tile"
-                        :class="getStatus(ll.order, j, i)"
-                >
-                    {{ll.letter}}
+        <div v-if="!gameStarted">
+            <div id="board-text">
+                Play for the best time or the best score.<br>
+                3- and 4- letter words are 1 point each<br>
+                5-letter words are 2 points each<br>
+                6-letter words are 3 points each<br>
+                7-letter words are 5 points each<br>
+                8-letter words are 11 points each
+            </div>
+            <button v-if="roundNumber < 4" @click="startGame" class="enter"> I'm Ready! </button>
+        </div>
+        <div v-else-if="gameStarted && roundPause">
+            <div id="board-text">
+                <div v-for="(round,i) in rounds">
+                    Round {{round.roundNumber}}: <br>
+                    Time: {{round.time}} <br>
+                    Score: {{score(round)}} <br>
+                    <span v-for="(word, i) in round.solutionWords">
+                        {{getSolution(word)}} ({{getSolutionScore(word)}})
+                    </span>
+                </div>
+            </div>
+            <button v-if="roundNumber < 4" @click="startGame" class="enter"> I'm Ready! </button>
+            <button v-else-if="roundNumber === 4" @click="shareGame" class="enter"> Share Results! </button>
+        </div>
+        <div v-else-if="gameStarted && !roundPause">
+            <div> Round: {{roundNumber}} </div>
+            <div > {{time}} </div>
+            <div id="board">
+                <div v-for="(lll, i) in letterStates" class="row">
+                    <button v-for="(ll, j) in lll"
+                            :disabled="ll.order === -2"
+                            @click="setSolution(ll, j, i)"
+                            class="tile"
+                            :class="getStatus(ll.order, j, i)"
+                    >
+                        {{ll.letter}}
+                    </button>
+                </div>
+            </div>
+            <button class="enter" @click="enterSolution"> Enter </button>
+            <div id="answers">
+                <button v-if="solution.length > 0" @click="removeSolution(solution, -1)">
+                    {{getSolution(solution)}} ({{getSolutionScore(solution)}}) <b> X</b>
                 </button>
+                <button v-for="(word, index) in solutionWords"
+                        @click="removeSolution(word, index)"
+                        align="center"
+                        justify="center"
+                > {{getSolution(word)}} ({{getSolutionScore(word)}}) <b>X </b> </button>
             </div>
         </div>
-        <button class="enter" @click="enterSolution"> Enter </button>
-        <div id="answers">
-            {{getSolution(solution)}}
-            <button v-for="(word, index) in solutionWords"
-                    @click="removeSolution(word, index)"
-                    align="center"
-                    justify="center"
-            > {{getSolution(word)}} <b>X </b> </button>
-        </div>
-    </div>
     </div>
 </template>
 
@@ -50,43 +79,42 @@ interface SolutionLetter {
     letter: string;
 }
 
+interface RoundData {
+    roundNumber: number;
+    solutionWords: SolutionLetter[][];
+    status: string;
+    startTime: Date;
+    endTime: Date;
+    time: string;
+}
+
 @Component
 export default class LemonGame extends Vue {
     private time: string =  '00:00:00.000';
-    private gameStarted: boolean = true;
+    private gameStarted: boolean = false;
     private gameTimer: number = 0;
     private stoppedDuration: number = 0;
     private timeBegan: Date = null;
+    private timeEnd: Date = null;
     private solution: SolutionLetter[] = [];
     private solutionWords: SolutionLetter[][] = [];
     private order: number = 0;
     private message: string = '';
-    private lemonLetters: string[][] = [
-        ['L', 'W', 'U', 'G'],
-        ['N', 'E', 'M', 'T'],
-        ['E', 'R', 'S', 'C'],
-        ['U', 'T', 'O', 'E'],
-    ];
+    private lemonLetters1: string = 'SOURORANGECITRON';
+    private lemonLetters2: string = 'TECHNICALLYBERRY';
+    private lemonLetters3: string = 'SIXHUNDREDPOUNDS';
     private showModal: boolean = true;
     private letterStates: LetterState[][] = [];
-
+    private rounds: RoundData[] = [];
+    private roundNumber: number = 1;
     private dictSet: Set<string> = new Set<string>();
+    private roundPause: boolean = false;
 
     private mounted(): void {
         for (const word of dict.match(/\b(\w+)\b/g)) {
             // console.log(word);
             this.dictSet.add(word);
         }
-        for (const lll of this.lemonLetters) {
-            const newLetters: LetterState[] = [];
-            for (const ll of lll) {
-                const ls: LetterState = {letter: ll, order: -1};
-                newLetters.push(ls);
-            }
-            this.letterStates.push(newLetters);
-        }
-        console.log(this.letterStates);
-        this.startGame();
     }
     // function shake() {
     //     shakeRowIndex = currentRowIndex
@@ -94,6 +122,28 @@ export default class LemonGame extends Vue {
     //         shakeRowIndex = -1
     //     }, 1000)
     //     }
+    private loadRound() {
+        let letters: string = '';
+        if (this.roundNumber === 1) {
+            letters = this.lemonLetters1;
+        } else if (this.roundNumber === 2) {
+            letters = this.lemonLetters2;
+        } else {
+            letters = this.lemonLetters3;
+        }
+
+        this.letterStates = [];
+        for (let i = 0; i < 4; i++) {
+            const newLetters: LetterState[] = [];
+            for (let j = 0; j < 4; j++) {
+                const randomLetterPosition = Math.floor(Math.random() * letters.length);
+                const ls: LetterState = {letter: letters[randomLetterPosition], order: -1 };
+                letters = letters.slice(0, randomLetterPosition) + letters.slice(randomLetterPosition + 1);
+                newLetters.push(ls);
+            }
+            this.letterStates.push(newLetters);
+        }
+    }
     private showMessage(msg: string, time = 1000) {
         this.message = msg;
         if (time > 0) {
@@ -109,6 +159,26 @@ export default class LemonGame extends Vue {
         }
         return solString;
     }
+    private getSolutionScore(sol: SolutionLetter[]): number {
+        if (sol.length <= 4) {
+            return 1;
+        } else if (sol.length === 5) {
+            return 2;
+        } else if (sol.length === 6) {
+            return 3;
+        } else if (sol.length === 7) {
+            return 5;
+        } else {
+            return 11;
+        }
+    }
+    private score(round: RoundData): number {
+        let roundScore: number = 0;
+        for (const word of round.solutionWords) {
+            roundScore = roundScore + this.getSolutionScore(word);
+        }
+        return roundScore;
+    }
     private setSolution(ls: LetterState, x: number, y: number) {
         if (ls.order === -1) {
             const solLetter: SolutionLetter = {
@@ -118,29 +188,14 @@ export default class LemonGame extends Vue {
             };
             this.solution.push(solLetter);
             ls.order = this.order;
-            this.order += 1;
+            this.order = 1;
         } else {
-            this.solution.splice(ls.order, 1);
-            // this.solution = this.solution.substring(0, ls.order) +
-            //                 this.solution.substring(ls.order + 1, this.solution.length);
+            this.solution = this.solution.filter((sl) => sl.x !== x || sl.y !== y);
             ls.order = -1;
-            this.order -= 1;
-            for (const lll of this.letterStates) {
-                for (const ll of lll) {
-                    if (ll.order !== -1 && ll.order !== 0 && ll.order !== -2) {
-                        ll.order -= 1;
-                    }
-                }
-            }
         }
-        if (this.dictSet.has(this.getSolution(this.solution))) {
-            console.log('that is a word');
-        }
-        console.log(this.order);
-        console.log(this.letterStates);
     }
     private enterSolution() {
-        if (this.solution.length < 4) {
+        if (this.solution.length < 3) {
             // shake()
             this.showMessage(`All words must be at least three letters long`);
             return;
@@ -161,8 +216,19 @@ export default class LemonGame extends Vue {
             }
             this.order = 0;
             if (won) {
-                this.showMessage(`woah cool`);
                 clearInterval(this.gameTimer);
+                const round = {
+                    roundNumber: this.roundNumber,
+                    solutionWords: this.solutionWords,
+                    status: 'complete',
+                    startTime: this.timeBegan,
+                    endTime: this.timeEnd,
+                    time: this.time,
+                };
+                this.rounds.push(round);
+                this.roundNumber = this.roundNumber + 1;
+                this.roundPause = true;
+                this.solutionWords = [];
             }
         } else {
             // shake()
@@ -174,7 +240,11 @@ export default class LemonGame extends Vue {
             console.log('in remove');
             this.letterStates[sl.y][sl.x].order = -1;
         }
-        this.solutionWords.splice(index, 1);
+        if (index === -1) {
+            this.solution = [];
+        } else {
+            this.solutionWords.splice(index, 1);
+        }
     }
     private getStatus(order: number): string {
         if (order === -1) {
@@ -187,14 +257,64 @@ export default class LemonGame extends Vue {
     }
 
     private startGame() {
-        if (this.timeBegan === null) {
-            this.timeBegan = new Date();
-        }
+        this.loadRound();
+        this.roundPause = false;
+        this.gameStarted = true;
+        this.timeBegan = new Date();
         this.gameTimer = setInterval(this.clockRunning, 10);
     }
+    private gameText() {
+        let text: string = '';
+        if (this.roundNumber === 1) {
+            text = 'Lemons is an anagram game where you can play for the best time or the best score.\n';
+            text = text + '3- and 4- letter words are 1 point each\n' +
+                   '5-letter words are 2 points each\n' +
+                   '6-letter words are 3 points each\n' +
+                   '7-letter words are 5 points each\n' +
+                   '8-letter words are 11 points each';
+        } else if (this.roundNumber === 2) {
+            text = 'some score thing';
+        } else if (this.roundNumber === 3) {
+            text = 'another score';
+        }
+        return text;
+    }
+    private shareGame() {
+        let totalScore: number = 0;
+        let hour: number = 0;
+        let min: number = 0;
+        let sec: number = 0;
+        let ms: number = 0;
+
+        for (const round of this.rounds) {
+            totalScore = totalScore + this.score(round);
+            const timeElapsed = new Date(round.endTime.getTime() - round.startTime.getTime());
+            hour += timeElapsed.getUTCHours();
+            min += timeElapsed.getUTCMinutes();
+            sec += timeElapsed.getUTCSeconds();
+            ms += timeElapsed.getUTCMilliseconds();
+        }
+
+        const totalTime =
+            this.zeroPrefix(hour, 2) + ':' +
+            this.zeroPrefix(min, 2) + ':' +
+            this.zeroPrefix(sec, 2) + '.' +
+            this.zeroPrefix(ms, 3);
+
+        const shareText: string = 'Lemons\n' + 'Time: ' + totalTime + '\n' + 'Score: ' + totalScore;
+        if (navigator.share) {
+            navigator.share({
+                text: shareText,
+            }).then(() => {
+                console.log('Thanks for sharing!');
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(shareText);
+        }
+    }
     private clockRunning() {
-        const currentTime: Date = new Date();
-        const timeElapsed = new Date(currentTime.getTime() - this.timeBegan.getTime() - this.stoppedDuration);
+        this.timeEnd = new Date();
+        const timeElapsed = new Date(this.timeEnd.getTime() - this.timeBegan.getTime() - this.stoppedDuration);
         const hour = timeElapsed.getUTCHours();
         const min = timeElapsed.getUTCMinutes();
         const sec = timeElapsed.getUTCSeconds();
@@ -220,6 +340,27 @@ export default class LemonGame extends Vue {
 
 
 <style scoped>
+#board-text {
+    display: grid;
+    grid-template-rows: repeat(4, 1fr);
+    grid-gap: 5px;
+    padding: 10px;
+    box-sizing: border-box;
+    --height: min(350px, calc(var(--vh, 100vh) - 310px));
+    height: var(--height);
+    width: min(350px, calc(var(--height) / 4 * 4));
+    margin: 0px auto;
+    white-space: normal;
+    justify-content: center;
+}
+.center-text {
+    white-space: normal;
+    margin: 0px auto;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
 .message {
     position: absolute;
     left: 50%;
@@ -338,5 +479,10 @@ body {
     position: absolute;
     top: 10px;
     right: 10px;
+}
+@media (max-height: 680px) {
+    .tile {
+        font-size: 3vh;
+    }
 }
 </style>
