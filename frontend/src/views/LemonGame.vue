@@ -11,12 +11,17 @@
         </header>
         <div v-if="!gameStarted">
             <div id="board-text">
-                Play for the best time or the best score.<br>
+                What can you make from lemons? <br>
+                <br>
+                Form words using exactly all 16 letters. <br>
+                Play for the best time or score over 3 rounds.<br>
+                Share with your friends! <br>
+                <br>
                 3- and 4- letter words are 1 point each<br>
                 5-letter words are 2 points each<br>
                 6-letter words are 3 points each<br>
                 7-letter words are 5 points each<br>
-                8-letter words are 11 points each
+                8-letter words are 11 points each 
             </div>
             <button v-if="roundNumber < 4" @click="startGame" class="button-1"> I'm Ready! </button>
         </div>
@@ -54,16 +59,24 @@
                 </div>
             </div>
             <button v-if="!roundReady" class="button-1" @click="enterSolution"> Enter </button>
-            <button v-if="roundReady" class="button-1" @click="nextRound"> Next Round! </button>
+            <button v-if="roundReady && roundNumber < 3" class="button-1" @click="nextRound"> Next Round! </button>
+            <button v-if="roundReady && roundNumber >= 3" class="button-1" @click="nextRound"> Continue! </button>
             <div id="answers">
-                <button class="button-2" v-if="solution.length > 0" @click="removeSolution(solution, -1)">
+                <button class="button-3" v-if="solution.length > 0" @click="removeSolution(solution, -1)">
                     {{getSolution(solution)}} ({{getSolutionScore(solution)}}) <b> X</b>
                 </button>
-                <button class="button-2" v-for="(word, index) in solutionWords"
+                <button v-if="!roundReady" class="button-2" v-for="(word, index) in solutionWords"
                         @click="removeSolution(word, index)"
                         align="center"
                         justify="center"
+                        :disabled="roundReady"
                 > {{getSolution(word)}} ({{getSolutionScore(word)}}) <b>X </b> </button>
+                <button v-if="roundReady" class="button-4" v-for="(word, index) in solutionWords"
+                        @click="removeSolution(word, index)"
+                        align="center"
+                        justify="center"
+                        :disabled="roundReady"
+                > {{getSolution(word)}} ({{getSolutionScore(word)}})</button>
             </div>
         </div>
     </div>
@@ -544,6 +557,56 @@ body {
    } */
 .button-2 {
     background-color: #fcc219;
+    border-radius: 8px;
+    border-style: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-block;
+    font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    height: 40px;
+    line-height: 20px;
+    list-style: none;
+    margin: 3px;
+    outline: none;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: color 100ms;
+    vertical-align: baseline;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+.button-3 {
+    background-color: #f8932b;
+    border-radius: 8px;
+    border-style: none;
+    box-sizing: border-box;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: inline-block;
+    font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    height: 40px;
+    line-height: 20px;
+    list-style: none;
+    margin: 3px;
+    outline: none;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    transition: color 100ms;
+    vertical-align: baseline;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+.button-4 {
+    background-color: #75803e;
     border-radius: 8px;
     border-style: none;
     box-sizing: border-box;
