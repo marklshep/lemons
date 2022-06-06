@@ -3,7 +3,6 @@
         <Transition>
             <div class="message" v-if="message">
                 {{ message }}
-                <!-- <pre v-if="grid">{{ grid }}</pre> -->
             </div>
         </Transition>
         <header>
@@ -133,16 +132,9 @@ export default class LemonGame extends Vue {
     private roundReady: boolean = false;
     private mounted(): void {
         for (const word of dict.match(/\b(\w+)\b/g)) {
-            // console.log(word);
             this.dictSet.add(word);
         }
     }
-    // function shake() {
-    //     shakeRowIndex = currentRowIndex
-    //     setTimeout(() => {
-    //         shakeRowIndex = -1
-    //     }, 1000)
-    //     }
     private loadRound() {
         let letters: string = '';
         if (this.roundNumber === 1) {
@@ -229,7 +221,6 @@ export default class LemonGame extends Vue {
     }
     private enterSolution() {
         if (this.solution.length < 3) {
-            // shake()
             this.showMessage(`All words must be at least three letters long`);
             return;
         }
@@ -253,7 +244,6 @@ export default class LemonGame extends Vue {
                 this.roundReady = true;
             }
         } else {
-            // shake()
             this.showMessage(`Not in word list`);
         }
     }
